@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 
 
 # ============================================================
@@ -53,7 +54,6 @@ st.header("그래프 1. 영화별 날짜에 따른 일관객 변화")
 
 st.write("영화를 하나 선택하면 해당 영화의 날짜별 일관객 변화를 확인할 수 있습니다.")
 
-# 영화 선택
 movie_list = sorted(df["영화명"].dropna().unique())
 
 selected_movie = st.selectbox(
@@ -61,13 +61,9 @@ selected_movie = st.selectbox(
     movie_list
 )
 
-# 선택한 영화의 데이터
 movie_df = df[df["영화명"] == selected_movie].copy()
-
-# 날짜순 정렬
 movie_df = movie_df.sort_values("날짜")
 
-# 선 그래프
 fig1 = px.line(
     movie_df,
     x="날짜",
@@ -80,7 +76,6 @@ fig1 = px.line(
     }
 )
 
-# 마우스를 올렸을 때 날짜와 관객수가 보이도록 설정
 fig1.update_traces(
     hovertemplate="날짜: %{x|%Y-%m-%d}<br>일관객: %{y:,}명<extra></extra>"
 )
@@ -93,13 +88,7 @@ fig1.update_layout(
 
 st.plotly_chart(fig1, use_container_width=True)
 
-
-# ------------------------------------------------------------
-# 그래프 1 설명 자리
-# ------------------------------------------------------------
-
 st.markdown("### 이 그래프로 알 수 있는 것")
-
 st.write("")
 
 
@@ -116,34 +105,19 @@ st.write(
     "날짜별 일관객 변화를 비교합니다."
 )
 
-
-# ------------------------------------------------------------
-# 기간 전체에서 영화별 일관객 합계 계산
-# ------------------------------------------------------------
-
+# 영화별 기간 전체 일관객 합계
 movie_totals = (
     df.groupby("영화명", as_index=False)["일관객"]
     .sum()
     .sort_values("일관객", ascending=False)
 )
 
-# 일관객 합계가 가장 큰 5편
+# TOP 5
 top5_movies = movie_totals.head(5)["영화명"].tolist()
 
-
-# ------------------------------------------------------------
-# TOP 5 영화만 골라내기
-# ------------------------------------------------------------
-
+# TOP 5 데이터
 top5_df = df[df["영화명"].isin(top5_movies)].copy()
-
-# 날짜순으로 정렬
 top5_df = top5_df.sort_values(["날짜", "영화명"])
-
-
-# ------------------------------------------------------------
-# TOP 5 날짜별 일관객 선 그래프
-# ------------------------------------------------------------
 
 fig2 = px.line(
     top5_df,
@@ -159,7 +133,6 @@ fig2 = px.line(
     }
 )
 
-# 마우스를 올렸을 때 날짜, 영화명, 관객수가 보이도록 설정
 fig2.update_traces(
     hovertemplate=(
         "영화: %{fullData.name}"
@@ -176,19 +149,9 @@ fig2.update_layout(
     legend_title="영화"
 )
 
-# 그래프 표시
-st.plotly_chart(
-    fig2,
-    use_container_width=True
-)
-
-
-# ------------------------------------------------------------
-# 그래프 2 설명 자리
-# ------------------------------------------------------------
+st.plotly_chart(fig2, use_container_width=True)
 
 st.markdown("### 이 그래프로 알 수 있는 것")
-
 st.write("")
 
 
@@ -198,8 +161,94 @@ st.write("")
 
 st.divider()
 
-st.header("그래프 3")
-st.write("앞으로 추가할 그래프를 위한 공간입니다.")
+st.header("그래프 3. 날짜별 10위권 일관객 합계")
+
+st.write(
+    "각 날짜의 10위권 영화들이 기록한 일관객을 모두 합산하여 "
+    "날짜별 전체 관객 규모의 변화를 보여 줍니다."
+)
+
+
+# ------------------------------------------------------------
+# 날짜별 10위권 일관객 합계 계산
+# ------------------------------------------------------------
+
+daily_total = (
+    df.groupby("날짜", as_index=False)["일관객"]
+    .sum()
+    .sort_values("날짜")
+)
+
+
+# ------------------------------------------------------------
+# 일관객 합계가 가장 컸던 3일 찾기
+# ------------------------------------------------------------
+
+top3_days = (
+    daily_total
+    .nlargest(3, "일관객")
+    .sort_values("날짜")
+)
+
+
+# ------------------------------------------------------------
+# 영역 그래프 만들기
+# ------------------------------------------------------------
+
+fig3 = go.Figure()
+
+fig3.add_trace(
+    go.Scatter(
+        x=daily_total["날짜"],
+        y=daily_total["일관객"],
+        mode="lines",
+        fill="tozeroy",
+        name="10위권 일관객 합계",
+        hovertemplate=(
+            "날짜: %{x|%Y-%m-%d}"
+            "<br>10위권 일관객 합계: %{y:,}명"
+            "<extra></extra>"
+        )
+    )
+)
+
+
+# ------------------------------------------------------------
+# 가장 컸던 3일을 그래프 위에 표시
+# ------------------------------------------------------------
+
+for _, row in top3_days.iterrows():
+
+    fig3.add_annotation(
+        x=row["날짜"],
+        y=row["일관객"],
+        text=row["날짜"].strftime("%Y-%m-%d"),
+        showarrow=True,
+        arrowhead=2,
+        ax=0,
+        ay=-45
+    )
+
+
+fig3.update_layout(
+    title="날짜별 10위권 일관객 합계",
+    xaxis_title="날짜",
+    yaxis_title="일관객 합계(명)",
+    hovermode="x unified"
+)
+
+
+# 그래프 표시
+st.plotly_chart(fig3, use_container_width=True)
+
+
+# ------------------------------------------------------------
+# 그래프 3 설명 자리
+# ------------------------------------------------------------
+
+st.markdown("### 이 그래프로 알 수 있는 것")
+
+st.write("")
 
 
 # ============================================================
