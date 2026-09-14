@@ -157,7 +157,7 @@ st.plotly_chart(
     use_container_width=True
 )
 
-st.markdown("### 이 그래프로 알 수 있는 것")
+st.markdown("### 이 그래프로 알 수 있는 것 심윤희 바보")
 st.write("")
 
 
